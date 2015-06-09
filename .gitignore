@@ -1,0 +1,6 @@
+sources/fftw-3.3.4/*
+sources/3D_Dock/progs/*
+!sources/3D_Dock/progs/*.c
+!sources/3D_Dock/progs/*.h
+!sources/3D_Dock/progs/Makefile
+!sources/3D_Dock/progs/*.py
