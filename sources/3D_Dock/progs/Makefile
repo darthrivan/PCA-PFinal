@@ -12,7 +12,7 @@
 
 # This line you will definitely have to edit
 
-FFTW_DIR        = /dades/pr_grau-pca/linux/1415/finalproject/finalProject1415q2/sources/fftw-2.1.3/installation/
+FFTW_DIR        = PATH_LLIB/installation/
 
 #############
 
