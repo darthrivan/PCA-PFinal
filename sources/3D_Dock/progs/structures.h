@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include "rfftw.h"
+#include "fftw3.h"
 
 /************/
 
@@ -58,6 +58,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GENERAL_MEMORY_PROBLEM printf( "You do not have enough memory ([m|re]alloc failure)\nDying\n\n" ) ; exit( EXIT_FAILURE ) ;
 
 /************/
+
+// DEFINE A TYPE FOR FFTW3
+typedef float fftw_real;
 
 /* The structures comprising a Structure (representation of an organic molecule in 3D) */
 
