@@ -97,27 +97,11 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
   float		distance ;
   float		phi , epsilon ;
 
-/************/
-
-  for( x = 0 ; x < grid_size ; x ++ ) {
-    for( y = 0 ; y < grid_size ; y ++ ) {
-      for( z = 0 ; z < grid_size ; z ++ ) {
-
-        grid[gaddress(x,y,z,grid_size)] = (fftw_real)0 ;
-
-      }
-    }
-  }
+  struct Amino_Acid *struct_res;
+  struct Atom *struct_res_atom;
 
 /************/
-
-  setvbuf( stdout , (char *)NULL , _IONBF , 0 ) ;
-
-  printf( "  electric field calculations ( one dot / grid sheet ) " ) ;
-
   for( x = 0 ; x < grid_size ; x ++ ) {
-
-    printf( "." ) ;
 
     x_centre  = gcentre( x , grid_span , grid_size ) ;
 
@@ -132,38 +116,19 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
         phi = 0 ;
 
         for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
-          for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
+          struct_res = &This_Structure.Residue[residue];
+          for( atom = 1 ; atom <= struct_res->size ; atom ++ ) {
+            struct_res_atom = &struct_res->Atom[atom];
+            if( struct_res_atom->charge != 0 ) { // TODO es pot treure
 
-            if( This_Structure.Residue[residue].Atom[atom].charge != 0 ) {
-
-              distance = pythagoras( This_Structure.Residue[residue].Atom[atom].coord[1] , This_Structure.Residue[residue].Atom[atom].coord[2] , This_Structure.Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) ;
+              distance = pythagoras( struct_res_atom->coord[1] , struct_res_atom->coord[2] , struct_res_atom->coord[3] , x_centre , y_centre , z_centre ) ;
          
               if( distance < 2.0 ) distance = 2.0 ;
 
-              if( distance >= 2.0 ) {
-
-                if( distance >= 8.0 ) {
-
-                  epsilon = 80 ;
-
-                } else { 
-
-                  if( distance <= 6.0 ) { 
-
-                    epsilon = 4 ;
-             
-                  } else {
-
-                    epsilon = ( 38 * distance ) - 224 ;
-
-                  }
-
-                }
-  
-                phi += ( This_Structure.Residue[residue].Atom[atom].charge / ( epsilon * distance ) ) ;
-
-              }
-
+              epsilon = 38*distance - 224; // TODO if epsilon > 80 = 80; if epsilon < 4 = 4;
+              epsilon = min(epsilon, 80);
+              epsilon = max(epsilon, 4);
+              phi += ( struct_res_atom->charge / ( epsilon * distance ) ) ;
             }
 
           }
