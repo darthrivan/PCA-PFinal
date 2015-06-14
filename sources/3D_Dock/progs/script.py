@@ -102,7 +102,8 @@ class Program(object):
 		run([self.get_exec_path()] +
 			 self.get_arguments(),
 			 stdin=self.input_stream,
-			 stdout=self.output_stream)
+			 stdout=self.output_stream,
+			 stderr=self.output_stream)
 
 
 class Compiler(object):
@@ -295,6 +296,12 @@ class Plotter(object):
 		datfile.close()
 
 
+class TestFailureException(Exception):
+	"""docstring for TestFailureException"""
+	# def __init__(self, commit):
+	# 	super(TestFailureException, self).__init__()
+	# 	self.msg = "Commit %s has failed test"
+
 class Tester(object):
 	"""docstring for Tester"""
 	def __init__(self, original_program, binary=False, input_file=None):
@@ -338,7 +345,8 @@ class Tester(object):
 		if self.input_file:
 			input_file.close()
 		output_file.close()
-		return testFunction('/tmp/output_original.out', '/tmp/output_tested.out')
+		if not testFunction('/tmp/output_original.out', '/tmp/output_tested.out'):
+			raise TestFailureException()
 		Debugger.success()
 
 
@@ -361,6 +369,8 @@ if __name__ == "__main__":
 					"account all of them")
 	argument_parser.add_argument('-f', '--file',
 		help='Program to compare', required=True)
+	argument_parser.add_argument('-e', '--executable',
+		help='Executable file', required=False)
 	argument_parser.add_argument('-i', '--input',
 		help='Input file to program', required=False)
 	argument_parser.add_argument('-u', '--uncommitted', metavar='FILE',
@@ -371,7 +381,16 @@ if __name__ == "__main__":
 
 	# PARAMETERS
 	OMIT_COMMITS = ['bae0dade883a99c50ba07842c51ae90c19d23dd6']
+	# OMIT_COMMITS = []
+	# COMPILATION_FLAGS = ['-I../../fftw-3.3.4/installation/include', '-O3',
+	# 					 '-march=native', '-pg', '-g', '-static', '-c']
 	COMPILATION_FLAGS = ['-x', 'none', '-I../../fftw-3.3.4/installation/include',
+						 '-O3', '-march=native', '-pg', '-g', '-static',
+						 'manipulate_structures.o', 'angles.o', 'coordinates.o',
+						 'electrostatics.o', 'grid.o', 'qsort_scores.o',
+						 '-L../../fftw-3.3.4/installation/lib', '-lfftw3f', '-lm']
+
+	EXECUTABLE_FLAGS  = ['-x', 'none', '-I../../fftw-3.3.4/installation/include',
 						 '-O3', '-march=native', '-pg', '-g', '-static',
 						 'manipulate_structures.o', 'angles.o', 'coordinates.o',
 						 'electrostatics.o', 'grid.o', 'qsort_scores.o',
@@ -420,22 +439,30 @@ if __name__ == "__main__":
 			Debugger.error('Failed to compare outputs', fatal=False)
 
 	def acc(commit, code, test=None):
-		compiler  = Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True)
+		if args.get('executable'):
+			Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True).compile(args.get('file')[:-2] + '.o')
+			compiler = Compiler(args.get('executable'), flags=EXECUTABLE_FLAGS, from_stdin=False)
+		else:
+			compiler  = Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True)
 		program   = compiler.compile('tmp_' + commit[:5])
 		program.set_arguments(PROGRAM_ARGUMENTS)
 		if test is not None:
 			try:
 				test(program, is_output_correct)
-			except CalledProcessError:
+			except (CalledProcessError, TestFailureException):
 				Debugger.error('Commit %s not producing same output' % commit)
 		program.set_output_stream(DEVNULL)
-		accounter = InlineAccounter(program, 1)
+		accounter = InlineAccounter(program, 5)
 		accounter.account()
 		measures  = accounter.get_measures('Elapsed')
 		return sum([a['Elapsed'] for a in measures]) / len(measures)
 
 	def acc_with_input(commit, code, test=None):
-		compiler  = Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True)
+		if args.get('executable'):
+			Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True).compile(args.get('file')[:-2] + '.o')
+			compiler = Compiler(args.get('executable'), flags=EXECUTABLE_FLAGS, from_stdin=False)
+		else:
+			compiler  = Compiler(code, flags=COMPILATION_FLAGS, from_stdin=True)
 		program   = compiler.compile('tmp_' + commit[:5])
 		program.set_arguments(PROGRAM_ARGUMENTS)
 		input_file = open(INPUT_FILE, 'rb')
@@ -443,7 +470,7 @@ if __name__ == "__main__":
 		if test is not None:
 			try:
 				test(program, is_output_correct)
-			except CalledProcessError:
+			except (CalledProcessError, TestFailureException):
 				Debugger.error('Commit %s not producing same output' % commit)
 		program.set_output_stream(DEVNULL)
 		input_file.seek(0)
@@ -466,7 +493,11 @@ if __name__ == "__main__":
 		code_file.close()
 	fun = None
 	if args.get('testing'):
-		compiler = Compiler(versions[0][1], flags=COMPILATION_FLAGS, from_stdin=True)
+		if args.get('executable'):
+			Compiler(versions[0][1], flags=COMPILATION_FLAGS, from_stdin=True).compile(args.get('file')[:-2] + '.o')
+			compiler = Compiler(args.get('executable'), flags=EXECUTABLE_FLAGS, from_stdin=False)
+		else:
+			compiler = Compiler(versions[0][1], flags=COMPILATION_FLAGS, from_stdin=True)
 		program  = compiler.compile('tmp_test')
 		program.set_arguments(PROGRAM_ARGUMENTS)
 		tester   = Tester(program, binary=BINARY_OUTPUT, input_file=INPUT_FILE)
